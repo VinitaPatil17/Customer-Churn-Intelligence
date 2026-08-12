@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Customer Churn Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#132540; --navy2:#1f3a5f; --coral:#e0674b; --coral-soft:#f3d9d1;
+    --bg:#f5f6f8; --card:#ffffff; --line:#e3e6eb; --text:#1c2530; --muted:#6b7686;
+    --green:#2f9e6e;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);font-family:'Segoe UI',Helvetica,Arial,sans-serif;color:var(--text);}
+  .topbar{background:var(--navy);color:#fff;padding:22px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  .topbar h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.2px;}
+  .topbar p{margin:2px 0 0;font-size:12.5px;color:#aebbcf;}
+  .badge{background:var(--coral);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.4px;}
+  .wrap{max-width:1280px;margin:0 auto;padding:24px 24px 60px;}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden;}
+  .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--navy2);}
+  .kpi.alert::before{background:var(--coral);}
+  .kpi .label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+  .kpi .value{font-size:26px;font-weight:800;margin-top:6px;color:var(--navy);}
+  .kpi.alert .value{color:var(--coral);}
+  .kpi .sub{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px 8px;}
+  .card h3{margin:0 0 2px;font-size:14.5px;font-weight:700;color:var(--navy);}
+  .card .desc{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  canvas{max-height:230px;}
+  .insight-bar{background:var(--navy);color:#fff;border-radius:10px;padding:16px 20px;margin:18px 0;display:flex;gap:16px;align-items:flex-start;}
+  .insight-bar .icon{font-size:20px;}
+  .insight-bar b{color:#ffb199;}
+  .insight-bar p{margin:0;font-size:13px;line-height:1.5;color:#dfe6f0;}
+  .footer-note{font-size:11px;color:var(--muted);text-align:center;margin-top:28px;}
+  @media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr);}.grid,.grid3{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>Customer Churn Intelligence — Executive Dashboard</h1>
+    <p>IBM Telco Customer Churn dataset · 7,043 customers · Source: Kaggle / IBM Sample Data Sets</p>
+  </div>
+  <span class="badge">CHURN RATE 26.5%</span>
+</div>
+
+<div class="wrap">
+
+  <div class="kpis">
+    <div class="kpi alert">
+      <div class="label">Overall Churn Rate</div>
+      <div class="value">26.5%</div>
+      <div class="sub">1,869 of 7,043 customers</div>
+    </div>
+    <div class="kpi alert">
+      <div class="label">Monthly Revenue Lost</div>
+      <div class="value">$139.1K</div>
+      <div class="sub">from churned customers</div>
+    </div>
+    <div class="kpi alert">
+      <div class="label">Annualized Impact</div>
+      <div class="value">$1.67M</div>
+      <div class="sub">projected yearly loss</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Avg Tenure — Churned</div>
+      <div class="value">18.0 mo</div>
+      <div class="sub">vs 37.6 mo for retained</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Highest-Risk Segment</div>
+      <div class="value">42.7%</div>
+      <div class="sub">Month-to-month contracts</div>
+    </div>
+  </div>
+
+  <div class="insight-bar">
+    <div class="icon">💡</div>
+    <p><b>Key finding:</b> Customers on month-to-month contracts paying by electronic check churn at <b>57.7%</b> — more than 20x the rate of two-year contract customers (2.8%). This single combination (contract type × billing method) is the strongest churn signal in the data, ahead of price, tenure, or demographics alone.</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Churn Rate by Contract Type</h3>
+      <div class="desc">Month-to-month customers are the core retention problem</div>
+      <canvas id="chartContract"></canvas>
+    </div>
+    <div class="card">
+      <h3>Churn Rate by Tenure Stage</h3>
+      <div class="desc">Risk is highest in the first 12 months, then decays sharply</div>
+      <canvas id="chartTenure"></canvas>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3>By Internet Service</h3>
+      <div class="desc">Fiber customers churn most despite paying most</div>
+      <canvas id="chartInternet"></canvas>
+    </div>
+    <div class="card">
+      <h3>By Payment Method</h3>
+      <div class="desc">Manual/electronic check = highest friction</div>
+      <canvas id="chartPayment"></canvas>
+    </div>
+    <div class="card">
+      <h3>By Add-on Services Owned</h3>
+      <div class="desc">More bundled services → stickier customer</div>
+      <canvas id="chartAddon"></canvas>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:16px;">
+    <div class="card">
+      <h3>Revenue at Risk by Customer Value Tier</h3>
+      <div class="desc">High-spend customers ($70+/mo) account for 81% of lost revenue</div>
+      <canvas id="chartTierRevenue"></canvas>
+    </div>
+    <div class="card">
+      <h3>Churn Rate by Value Tier</h3>
+      <div class="desc">Higher bill → higher churn risk, not lower</div>
+      <canvas id="chartTierRate"></canvas>
+    </div>
+  </div>
+
+  <div class="footer-note">Customer Churn Intelligence · Built with Python (pandas), SQL (SQLite), and this dashboard · Data: IBM Telco Customer Churn (7,043 records)</div>
+</div>
+
+<script>
+const navy='#1f3a5f', coral='#e0674b', grey='#c7cdd6', navy2='#3d6693';
+Chart.defaults.font.family="'Segoe UI',Helvetica,Arial,sans-serif";
+Chart.defaults.font.size=11;
+Chart.defaults.color='#4a5568';
+
+function pctPlugin(){
+  return {
+    id:'pctLabels',
+    afterDatasetsDraw(chart){
+      const {ctx}=chart;
+      chart.data.datasets.forEach((ds,i)=>{
+        chart.getDatasetMeta(i).data.forEach((bar,idx)=>{
+          const v=ds.data[idx];
+          ctx.save();
+          ctx.fillStyle='#1c2530';
+          ctx.font='bold 11px Segoe UI';
+          ctx.textAlign='center';
+          if(chart.config.type==='bar' && chart.config.options.indexAxis==='y'){
+            ctx.textAlign='left';
+            ctx.fillText(v+'%', bar.x+6, bar.y+4);
+          } else {
+            ctx.fillText(v+'%', bar.x, bar.y-6);
+          }
+          ctx.restore();
+        });
+      });
+    }
+  };
+}
+
+new Chart(document.getElementById('chartContract'), {
+  type:'bar',
+  data:{labels:['Month-to-month','One year','Two year'],
+    datasets:[{data:[42.7,11.3,2.8], backgroundColor:[coral,navy,navy], borderRadius:4}]},
+  options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:50,ticks:{callback:v=>v+'%'}}}},
+  plugins:[pctPlugin()]
+});
+
+new Chart(document.getElementById('chartTenure'), {
+  type:'line',
+  data:{labels:['0-1 yr','1-2 yr','2-4 yr','4+ yr'],
+    datasets:[{data:[47.4,28.7,20.4,9.5], borderColor:coral, backgroundColor:'rgba(224,103,75,0.12)', fill:true, tension:.35, pointBackgroundColor:coral, pointRadius:5}]},
+  options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:55,ticks:{callback:v=>v+'%'}}}}
+});
+
+new Chart(document.getElementById('chartInternet'), {
+  type:'bar',
+  data:{labels:['Fiber optic','DSL','No internet'],
+    datasets:[{data:[41.9,19.0,7.4], backgroundColor:[coral,navy2,grey], borderRadius:4}]},
+  options:{indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,max:50,ticks:{callback:v=>v+'%'}}}},
+  plugins:[pctPlugin()]
+});
+
+new Chart(document.getElementById('chartPayment'), {
+  type:'bar',
+  data:{labels:['Electronic check','Mailed check','Bank transfer','Credit card'],
+    datasets:[{data:[45.3,19.1,16.7,15.2], backgroundColor:[coral,navy2,navy2,navy2], borderRadius:4}]},
+  options:{indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,max:55,ticks:{callback:v=>v+'%'}}}},
+  plugins:[pctPlugin()]
+});
+
+new Chart(document.getElementById('chartAddon'), {
+  type:'bar',
+  data:{labels:['0','1','2','3','4','5','6'],
+    datasets:[{data:[21.4,45.8,35.8,27.4,22.3,12.4,5.3], backgroundColor:navy2, borderRadius:4}]},
+  options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:55,ticks:{callback:v=>v+'%'}}}}
+});
+
+new Chart(document.getElementById('chartTierRevenue'), {
+  type:'bar',
+  data:{labels:['Low ($0-35)','Mid ($35-70)','High ($70+)'],
+    datasets:[{data:[4458,22182,112491], backgroundColor:[navy2,navy2,coral], borderRadius:4}]},
+  options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{callback:v=>'$'+(v/1000)+'K'}}}}
+});
+
+new Chart(document.getElementById('chartTierRate'), {
+  type:'bar',
+  data:{labels:['Low ($0-35)','Mid ($35-70)','High ($70+)'],
+    datasets:[{data:[10.9,23.9,35.4], backgroundColor:[navy2,navy2,coral], borderRadius:4}]},
+  options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,max:45,ticks:{callback:v=>v+'%'}}}},
+  plugins:[pctPlugin()]
+});
+</script>
+</body>
+</html>
